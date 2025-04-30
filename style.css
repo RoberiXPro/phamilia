@@ -529,8 +529,13 @@ min-height: 120px;
         transform: scale(1.05);
         box-shadow: 0 0 8px rgba(52, 152, 219, 0.6);
     }
-    
-    .message:hover 
+    .flou {
+        filter: blur(4px);
+        transition: filter 0.3s ease;
+    }
+    .message:hover .flou {
+        filter: none;
+    }
     h1 {
         font-size: 3em;
         color: #ffd700;
