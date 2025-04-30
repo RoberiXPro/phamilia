@@ -1,0 +1,30 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>RS Villa Familia</title>
+  <link rel="stylesheet" href="style.css" />
+  <script src="https://www.gstatic.com/firebasejs/8.6.8/firebase-app.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/8.6.8/firebase-database.js"></script>
+</head>
+<body>
+  <div id="login-container">
+    <h1>Connexion RS VILLA</h1>
+    <input type="text" id="username" placeholder="Votre pseudo" />
+    <input type="text" id="room-name-input" placeholder="Nom du lieu / quartier" />
+    <input type="password" id="password-input" placeholder="Mot de passe du lieu" />
+    <button onclick="joinRoom()">Entrer</button>
+  </div>
+
+  <div id="chat-container" style="display: none;">
+    <h2 id="room-name-display"></h2>
+    <ul id="online-users"></ul>
+    <div id="messages"></div>
+    <input type="text" id="message-input" placeholder="Votre message..." />
+    <button onclick="sendMessage()">Envoyer</button>
+  </div>
+
+  <script src="script.js"></script>
+</body>
+</html>
