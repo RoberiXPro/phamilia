@@ -367,7 +367,7 @@ function quitRoom() {
 
       if (data.replyTo) {
         const replyDiv = document.createElement("div");
-        replyDiv.className = "citation";
+        replyDiv.className = "citation flou";
         replyDiv.textContent = "Réponse du : " + data.replyTo;
         msgDiv.appendChild(replyDiv);
       }
@@ -389,10 +389,10 @@ function quitRoom() {
 content.className = "msg-text";
 
 if (data.user !== username) {
-  content
+  content.classList.add("flou");
 
   msgDiv.addEventListener("mouseenter", function () {
-    content
+    content.classList.remove("flou");
     if (!msgDiv.dataset.timerStarted) {
       msgDiv.dataset.timerStarted = "true";
       startDeletionTimer(msgDiv, key);
