@@ -531,9 +531,7 @@ min-height: 120px;
     }
     .flou {
         filter: blur(0.2px);
-        opacity: 1;
         transition: filter 0.3s ease;
-      
     }
     .message:hover .flou {
         filter: none;
