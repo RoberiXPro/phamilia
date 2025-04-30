@@ -1,9 +1,21 @@
-// Import the functions you need from the SDKs you need
-import { initializeApp } from "firebase/app";
-// TODO: Add SDKs for Firebase products that you want to use
-// https://firebase.google.com/docs/web/setup#available-libraries
+import { initializeApp } from "https://www.gstatic.com/firebasejs/9.6.10/firebase-app.js";
+import {
+  getDatabase,
+  ref,
+  set,
+  get,
+  child,
+  onValue,
+  onChildAdded,
+  onChildRemoved,
+  onChildChanged,
+  push,
+  update,
+  remove,
+  serverTimestamp
+} from "https://www.gstatic.com/firebasejs/9.6.10/firebase-database.js";
 
-// Your web app's Firebase configuration
+// Configuration Firebase (celle que tu m'as donnée)
 const firebaseConfig = {
   apiKey: "AIzaSyAbzjA_ARJSOvvjX9EDG-79qTxjDgpn3wA",
   authDomain: "phamille.firebaseapp.com",
@@ -14,65 +26,72 @@ const firebaseConfig = {
   appId: "1:183021771306:web:8cf9af194dac12ad630153"
 };
 
-// Initialize Firebase
 const app = initializeApp(firebaseConfig);
+const db = getDatabase(app);
 
-let username = "", roomName = "", db;
+// Variables globales
+let username = "";
+let roomName = "";
 
-function joinRoom() {
+// Connexion à une salle
+window.joinRoom = function () {
   username = document.getElementById("username").value;
   roomName = document.getElementById("room-name-input").value;
   const password = document.getElementById("password-input").value;
 
   if (!username || !roomName || !password) {
-    alert("Tous les champs sont obligatoires");
+    alert("Tous les champs sont obligatoires.");
     return;
   }
 
-  db = firebase.database().ref("rooms/" + roomName);
-
-  db.once("value").then(snapshot => {
+  const roomRef = ref(db, "rooms/" + roomName);
+  get(child(ref(db), "rooms/" + roomName)).then((snapshot) => {
     if (snapshot.exists()) {
-      const savedPassword = snapshot.child("password").val();
-      if (savedPassword !== password) {
+      if (snapshot.val().password !== password) {
         alert("Mot de passe incorrect !");
         return;
       }
     } else {
-      db.set({ password: password });
+      set(roomRef, {
+        password: password,
+        messages: {}
+      });
     }
 
     document.getElementById("login-container").style.display = "none";
     document.getElementById("chat-container").style.display = "block";
-    document.getElementById("room-name-display").textContent = "Salle : " + roomName;
+    document.getElementById("room-name-display").textContent = "Villa : " + roomName;
 
-    firebase.database().ref("rooms/" + roomName + "/onlineUsers/" + username).set({
+    const userRef = ref(db, "rooms/" + roomName + "/onlineUsers/" + username);
+    set(userRef, {
       status: "en ligne",
-      lastSeen: Date.now()
+      lastSeen: new Date().toISOString()
     });
 
-    firebase.database().ref("rooms/" + roomName + "/onlineUsers").on("child_added", snap => {
+    onChildAdded(ref(db, "rooms/" + roomName + "/onlineUsers"), (snap) => {
       const li = document.createElement("li");
       li.textContent = snap.key;
       document.getElementById("online-users").appendChild(li);
     });
 
-    firebase.database().ref("rooms/" + roomName + "/messages").on("child_added", snap => {
+    onChildAdded(ref(db, "rooms/" + roomName + "/messages"), (snap) => {
       const msg = snap.val();
       const div = document.createElement("div");
       div.textContent = msg.user + ": " + msg.message;
       document.getElementById("messages").appendChild(div);
     });
   });
-}
+};
 
-function sendMessage() {
+// Envoi de message
+window.sendMessage = function () {
   const message = document.getElementById("message-input").value;
   if (!message) return;
-  firebase.database().ref("rooms/" + roomName + "/messages").push({
+  const messageRef = push(ref(db, "rooms/" + roomName + "/messages"));
+  set(messageRef, {
     user: username,
     message: message,
     timestamp: Date.now()
   });
   document.getElementById("message-input").value = "";
-}
+};
