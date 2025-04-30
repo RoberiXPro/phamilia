@@ -161,6 +161,7 @@ function updateUserStatusUI(user, status) {
         userNameText.classList.add("user-status");
         userNameText.textContent = user + " - " + status;
         userElement.appendChild(userNameText);
+        initPrivateChatSystem();
 
         document.getElementById("online-users").appendChild(userElement);
     } else {
@@ -972,3 +973,79 @@ seenCheck.innerHTML = `
     msgDiv.appendChild(seenCheck);
   }
 }
+// 👉 À placer VERS LA FIN de ton script.js
+function initPrivateChatSystem() {
+  const userList = document.getElementById("online-users");
+  if (!userList) return;
+
+  userList.addEventListener("dblclick", function (event) {
+    const target = event.target.closest("li");
+    if (!target) return;
+
+    const otherUser = target.querySelector(".user-status")?.textContent?.split(" - ")[0];
+    if (!otherUser || otherUser === username) return;
+
+    const salleId = [username, otherUser].sort().join("-");
+
+    // Ne pas recréer si onglet déjà là
+    if (document.querySelector(`[data-room="${salleId}"]`)) {
+      switchToTab(salleId);
+      return;
+    }
+
+    // Création salle privée dans Firebase si elle n’existe pas
+    const salleRef = firebase.database().ref("salles_privees/" + salleId);
+    salleRef.once("value").then(snapshot => {
+      if (!snapshot.exists()) {
+        salleRef.set({
+          members: {
+            [username]: true,
+            [otherUser]: true
+          },
+          messages: {}
+        });
+      }
+      createPrivateTab(salleId, otherUser);
+      listenPrivateMessages(salleId);
+    });
+  });
+}
+
+// 👉 À ajouter DANS initializeUserListeners(), après userElement.appendChild(userNameText);
+initPrivateChatSystem();
+
+// 👉 Fonction globale : ajoute un onglet + gère affichage dynamique
+function createPrivateTab(roomId, label) {
+  const tabBar = document.getElementById("chat-tabs");
+  const tab = document.createElement("button");
+  tab.className = "tab";
+  tab.dataset.room = roomId;
+  tab.textContent = "🔒 " + label;
+  tab.onclick = () => switchToTab(roomId);
+  tabBar.appendChild(tab);
+}
+
+// 👉 Fonction globale : active l’onglet et affiche les bons messages
+function switchToTab(roomId) {
+  document.querySelectorAll(".tab").forEach(tab => tab.classList.remove("active"));
+  const targetTab = document.querySelector(`[data-room="${roomId}"]`);
+  if (targetTab) targetTab.classList.add("active");
+
+  const messagesDiv = document.getElementById("messages");
+  messagesDiv.innerHTML = "";
+
+  const msgRef = roomId === "main"
+    ? firebase.database().ref("rooms/" + roomName + "/messages")
+    : firebase.database().ref("salles_privees/" + roomId + "/messages");
+
+  msgRef.off(); // remove previous listeners
+  msgRef.on("child_added", function (snapshot) {
+    const data = snapshot.val();
+    displayMessage(snapshot.key, data);
+  });
+}
+
+// 👉 Optionnel : initialisation de l’onglet général au lancement
+document.addEventListener("DOMContentLoaded", () => {
+  switchToTab("main");
+});
