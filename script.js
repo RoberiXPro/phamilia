@@ -14,6 +14,9 @@
     var db;
     var username;
     var roomName;
+let activeRoomId = "main";
+let activeRef = null;
+let currentListener = null;
     var replyMessageId = null;
     var replyMessageText = "";
     var messageListener = null;
@@ -161,7 +164,7 @@ function updateUserStatusUI(user, status) {
         userNameText.classList.add("user-status");
         userNameText.textContent = user + " - " + status;
         userElement.appendChild(userNameText);
-        initPrivateChatSystem();
+       
 
         document.getElementById("online-users").appendChild(userElement);
     } else {
@@ -178,11 +181,14 @@ function removeUserFromUI(user) {
     }
 }
 
-    function switchToChat() {
-        document.getElementById("login-container").style.display = "none";
-        document.getElementById("chat-container").style.display = "block";
-        loadMessages();
-    }
+function switchToChat() {
+    document.getElementById("login-container").style.display = "none";
+    document.getElementById("chat-container").style.display = "block";
+    createTab("main", "🏠 Général");  // ✅ Ajoute ça pour créer l’onglet général
+    switchToTab("main");
+    initPrivateChatSystem();         // ✅ Et ça pour initialiser les dblclicks
+}
+
 // 🔥 Détection de changement d'onglet pour changer seulement la couleur du rond
 document.addEventListener("visibilitychange", function () {
   const userElement = document.getElementById("user-status-" + username);
@@ -225,8 +231,9 @@ function sendMessage() {
     }
 
     // ✅ CORRECTION ICI : utilise le `db` déjà défini
-    var msgRef = db.child("messages").push();
-    msgRef.set(msgData);
+ if (!activeRef) return;
+const msgRef = activeRef.push();
+msgRef.set(msgData);
 
     messageInput.value = '';
 }
@@ -978,52 +985,38 @@ function initPrivateChatSystem() {
   const userList = document.getElementById("online-users");
   if (!userList) return;
 
+  // On ajoute UNE SEULE FOIS le listener dblclick
   userList.addEventListener("dblclick", function (event) {
-    const target = event.target.closest("li");
-    if (!target) return;
+    const li = event.target.closest("li");
+    if (!li) return;
 
-    const otherUser = target.querySelector(".user-status")?.textContent?.split(" - ")[0];
-    if (!otherUser || otherUser === username) return;
+    const name = li.querySelector(".user-status")?.textContent?.split(" - ")[0];
+    if (!name || name === username) return;
 
-    const salleId = [username, otherUser].sort().join("-");
+    const roomId = [username, name].sort().join("-");
 
-    // Ne pas recréer si onglet déjà là
-    if (document.querySelector(`[data-room="${salleId}"]`)) {
-      switchToTab(salleId);
+    if (document.querySelector(`[data-room="${roomId}"]`)) {
+      switchToTab(roomId);
       return;
     }
 
-    // Création salle privée dans Firebase si elle n’existe pas
-    const salleRef = firebase.database().ref("salles_privees/" + salleId);
-    salleRef.once("value").then(snapshot => {
+    const privateRef = firebase.database().ref("salles_privees/" + roomId);
+    privateRef.once("value").then(snapshot => {
       if (!snapshot.exists()) {
-        salleRef.set({
+        privateRef.set({
           members: {
             [username]: true,
-            [otherUser]: true
+            [name]: true
           },
           messages: {}
         });
       }
-      createPrivateTab(salleId, otherUser);
-      listenPrivateMessages(salleId);
+      createTab(roomId, "🔒 " + name);
+      switchToTab(roomId);
     });
   });
 }
 
-// 👉 À ajouter DANS initializeUserListeners(), après userElement.appendChild(userNameText);
-initPrivateChatSystem();
-
-// 👉 Fonction globale : ajoute un onglet + gère affichage dynamique
-function createPrivateTab(roomId, label) {
-  const tabBar = document.getElementById("chat-tabs");
-  const tab = document.createElement("button");
-  tab.className = "tab";
-  tab.dataset.room = roomId;
-  tab.textContent = "🔒 " + label;
-  tab.onclick = () => switchToTab(roomId);
-  tabBar.appendChild(tab);
-}
 
 // 👉 Fonction globale : active l’onglet et affiche les bons messages
 function switchToTab(roomId) {
@@ -1031,21 +1024,35 @@ function switchToTab(roomId) {
   const targetTab = document.querySelector(`[data-room="${roomId}"]`);
   if (targetTab) targetTab.classList.add("active");
 
-  const messagesDiv = document.getElementById("messages");
-  messagesDiv.innerHTML = "";
+  // Nettoyer les anciens messages
+  const msgBox = document.getElementById("messages");
+  msgBox.innerHTML = "";
 
-  const msgRef = roomId === "main"
-    ? firebase.database().ref("rooms/" + roomName + "/messages")
-    : firebase.database().ref("salles_privees/" + roomId + "/messages");
+  // Stopper l'écoute précédente
+  if (currentListener && activeRef) {
+    activeRef.off("child_added", currentListener);
+  }
 
-  msgRef.off(); // remove previous listeners
-  msgRef.on("child_added", function (snapshot) {
-    const data = snapshot.val();
-    displayMessage(snapshot.key, data);
+  // Choisir la bonne référence Firebase
+  if (roomId === "main") {
+    activeRef = firebase.database().ref("rooms/" + roomName + "/messages");
+  } else {
+    activeRef = firebase.database().ref("salles_privees/" + roomId + "/messages");
+  }
+
+  // Nouveau listener
+  currentListener = activeRef.on("child_added", snap => {
+    displayMessage(snap.key, snap.val());
   });
-}
 
-// 👉 Optionnel : initialisation de l’onglet général au lancement
-document.addEventListener("DOMContentLoaded", () => {
-  switchToTab("main");
-});
+  activeRoomId = roomId;
+}
+function createTab(roomId, label) {
+  if (document.querySelector(`[data-room="${roomId}"]`)) return;
+  const tab = document.createElement("button");
+  tab.className = "tab";
+  tab.dataset.room = roomId;
+  tab.textContent = label;
+  tab.onclick = () => switchToTab(roomId);
+  document.getElementById("chat-tabs").appendChild(tab);
+}
