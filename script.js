@@ -389,8 +389,11 @@ function quitRoom() {
 content.className = "msg-text";
 
 if (data.user !== username) {
+  content
+
   msgDiv.addEventListener("mouseenter", function () {
-    contentif (!msgDiv.dataset.timerStarted) {
+    content
+    if (!msgDiv.dataset.timerStarted) {
       msgDiv.dataset.timerStarted = "true";
       startDeletionTimer(msgDiv, key);
     }
