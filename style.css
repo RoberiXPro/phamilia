@@ -881,5 +881,25 @@ min-height: 120px;
   height: 100%;
   stroke: #00ff88; /* ou #ffd700 pour doré */
 }
+.tab-bar {
+  display: flex;
+  gap: 10px;
+  margin-bottom: 10px;
+}
+
+.tab {
+  padding: 8px 14px;
+  border-radius: 6px;
+  background-color: #333;
+  color: #ffd700;
+  font-weight: bold;
+  cursor: pointer;
+  border: none;
+}
+
+.tab.active {
+  background-color: #ffd700;
+  color: #222;
+}
 
 </style>
